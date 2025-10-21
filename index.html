@@ -3,25 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + Three.js</title>
+  <title>AR.js + Three.js (CDN)</title>
   <style>
     html,body,canvas{margin:0;height:100%;overflow:hidden;background:transparent}
-    #status{
-      position:fixed;left:8px;top:8px;z-index:10;
-      font:12px/1.3 system-ui,Segoe UI,Roboto,Arial;
-      background:#0009;color:#fff;padding:6px 8px;border-radius:6px
-    }
+    #status{position:fixed;left:8px;top:8px;z-index:10;background:#0009;color:#fff;padding:6px 8px;border-radius:6px;font:12px/1.3 system-ui,Segoe UI,Roboto,Arial}
   </style>
-  <!-- Локальные библиотеки -->
-  <script src="./js/libs/three.min.js"></script>
-  <script src="./js/libs/ar.js"></script>
+
+  <!-- 1) UMD three r118 (НЕ three.module.js), должен идти ПЕРВЫМ -->
+  <script src="https://unpkg.com/three@0.118.3/build/three.min.js"></script>
+
+  <!-- 2) AR.js (three-ветка). Если один CDN не отвечает — используй другой. -->
+  <!-- Вариант А (unpkg) -->
+  <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.4/three.js/build/ar.js"></script>
+  <!-- Вариант Б (jsDelivr): <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.4/three.js/build/ar.js"></script> -->
+
+  <!-- Небольшой самотест -->
+  <script>
+    console.log('THREE?', !!window.THREE, 'REV', window.THREE && THREE.REVISION);
+    console.log('THREEx?', !!window.THREEx);
+  </script>
 </head>
 <body>
 <div id="status">init…</div>
 <script>
   const statusEl = document.getElementById('status');
 
-  // Renderer
+  // renderer
   const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
   renderer.setPixelRatio(devicePixelRatio);
   renderer.setSize(innerWidth, innerHeight);
@@ -29,12 +36,12 @@
   renderer.domElement.style.top = 0;
   document.body.appendChild(renderer.domElement);
 
-  // Scene & camera
+  // scene & camera
   const scene = new THREE.Scene();
   const camera = new THREE.Camera();
   scene.add(camera);
 
-  // Webcam
+  // webcam source
   const src = new THREEx.ArToolkitSource({ sourceType:'webcam' });
   src.init(onResize);
   addEventListener('resize', onResize);
@@ -44,9 +51,9 @@
     if (ctx.arController) src.copySizeTo(ctx.arController.canvas);
   }
 
-  // AR context
+  // AR context (берём дефолтный camera_para.dat по сети)
   const ctx = new THREEx.ArToolkitContext({
-    cameraParametersUrl: './img_ardata/camera_para.dat',
+    cameraParametersUrl: 'https://jeromeetienne.github.io/AR.js/data/data/camera_para.dat',
     detectionMode: 'mono'
   });
   ctx.init(() => {
@@ -54,41 +61,24 @@
     statusEl.textContent = 'camera ready, show marker';
   });
 
-  // Маркер
+  // HIRO-маркер по сети
   const markerRoot = new THREE.Group(); scene.add(markerRoot);
   new THREEx.ArMarkerControls(ctx, markerRoot, {
-    type:'pattern',
-    patternUrl:'./img_ardata/room1.patt',
-    size:0.12
+    type: 'pattern',
+    patternUrl: 'https://jeromeetienne.github.io/AR.js/data/patt.hiro',
+    size: 0.12
   });
 
-  // Визуальные подсказки
-  const axes = new THREE.AxesHelper(0.06); // RGB оси X,Y,Z
-  markerRoot.add(axes);
-
-  const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(0.06,0.06,0.06),
-    new THREE.MeshNormalMaterial()
-  );
-  cube.position.y = 0.03; // на маркере
-  markerRoot.add(cube);
-
-  let firstSeen = false;
+  // визуальные подсказки
+  const axes = new THREE.AxesHelper(0.06); markerRoot.add(axes);
+  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.06), new THREE.MeshNormalMaterial());
+  cube.position.y = 0.03; markerRoot.add(cube);
 
   (function loop(){
     requestAnimationFrame(loop);
     if (src.ready) ctx.update(src.domElement);
-
-    // статус
-    if (markerRoot.visible){
-      if (!firstSeen){ firstSeen = true; console.log('Marker VISIBLE'); }
-      statusEl.textContent = 'VISIBLE ✓  (markerRoot.visible=true)';
-      // лёгкая анимация, чтобы видеть, что сцена живёт
-      cube.rotation.y += 0.02;
-    } else {
-      statusEl.textContent = '…looking for marker';
-    }
-
+    statusEl.textContent = markerRoot.visible ? 'VISIBLE ✓' : '…looking for marker';
+    if (markerRoot.visible) cube.rotation.y += 0.02;
     renderer.render(scene, camera);
   })();
 </script>
