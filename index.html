@@ -4,22 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AR.js + Three.js (CDN)</title>
+  <link rel="icon" href="data:,"><!-- чтоб не было 404 на favicon -->
   <style>
     html,body,canvas{margin:0;height:100%;overflow:hidden;background:transparent}
-    #status{position:fixed;left:8px;top:8px;z-index:10;background:#0009;color:#fff;padding:6px 8px;border-radius:6px;font:12px/1.3 system-ui,Segoe UI,Roboto,Arial}
+    #status{position:fixed;left:8px;top:8px;z-index:10;background:#0009;color:#fff;
+            padding:6px 8px;border-radius:6px;font:12px/1.3 system-ui,Segoe UI,Roboto,Arial}
   </style>
 
-  <!-- 1) UMD three r118 (НЕ three.module.js), должен идти ПЕРВЫМ -->
+  <!-- three UMD r118 — ПЕРВЫМ -->
   <script src="https://unpkg.com/three@0.118.3/build/three.min.js"></script>
 
-  <!-- 2) AR.js (three-ветка). Если один CDN не отвечает — используй другой. -->
-  <!-- Вариант А (unpkg) -->
-  <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.4/three.js/build/ar.js"></script>
-  <!-- Вариант Б (jsDelivr): <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.4/three.js/build/ar.js"></script> -->
+  <!-- AR.js (three-ветка) с неймспейсом THREEx -->
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/three.js/build/ar-threex.js"></script>
 
-  <!-- Небольшой самотест -->
+  <!-- Самотест -->
   <script>
-    console.log('THREE?', !!window.THREE, 'REV', window.THREE && THREE.REVISION);
+    console.log('THREE?', !!window.THREE, 'REV', THREE && THREE.REVISION);
     console.log('THREEx?', !!window.THREEx);
   </script>
 </head>
@@ -28,7 +28,7 @@
 <script>
   const statusEl = document.getElementById('status');
 
-  // renderer
+  // Renderer
   const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
   renderer.setPixelRatio(devicePixelRatio);
   renderer.setSize(innerWidth, innerHeight);
@@ -36,22 +36,22 @@
   renderer.domElement.style.top = 0;
   document.body.appendChild(renderer.domElement);
 
-  // scene & camera
+  // Scene & camera
   const scene = new THREE.Scene();
   const camera = new THREE.Camera();
   scene.add(camera);
 
-  // webcam source
+  // Webcam (новые методы без warning'ов)
   const src = new THREEx.ArToolkitSource({ sourceType:'webcam' });
   src.init(onResize);
   addEventListener('resize', onResize);
   function onResize(){
-    src.onResize();
-    src.copySizeTo(renderer.domElement);
-    if (ctx.arController) src.copySizeTo(ctx.arController.canvas);
+    src.onResizeElement();
+    src.copyElementSizeTo(renderer.domElement);
+    if (ctx.arController) src.copyElementSizeTo(ctx.arController.canvas);
   }
 
-  // AR context (берём дефолтный camera_para.dat по сети)
+  // AR context (оставим camera_para.dat по сети; можно заменить на локальный при наличии)
   const ctx = new THREEx.ArToolkitContext({
     cameraParametersUrl: 'https://jeromeetienne.github.io/AR.js/data/data/camera_para.dat',
     detectionMode: 'mono'
@@ -61,15 +61,15 @@
     statusEl.textContent = 'camera ready, show marker';
   });
 
-  // HIRO-маркер по сети
+  // Маркер — ЛОКАЛЬНЫЙ .patt
   const markerRoot = new THREE.Group(); scene.add(markerRoot);
   new THREEx.ArMarkerControls(ctx, markerRoot, {
     type: 'pattern',
-    patternUrl: 'https://jeromeetienne.github.io/AR.js/data/patt.hiro',
-    size: 0.12
+    patternUrl: './img/ardata/room1.patt',
+    size: 0.165 // подставь реальную сторону маркера в метрах (напр., 0.12 = 12 см)
   });
 
-  // визуальные подсказки
+  // Подсказки
   const axes = new THREE.AxesHelper(0.06); markerRoot.add(axes);
   const cube = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.06), new THREE.MeshNormalMaterial());
   cube.position.y = 0.03; markerRoot.add(cube);
