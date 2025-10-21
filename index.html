@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AR.js + Three.js</title>
+  <style>
+    html,body,canvas{margin:0;height:100%;overflow:hidden;background:transparent}
+    #status{
+      position:fixed;left:8px;top:8px;z-index:10;
+      font:12px/1.3 system-ui,Segoe UI,Roboto,Arial;
+      background:#0009;color:#fff;padding:6px 8px;border-radius:6px
+    }
+  </style>
+  <!-- Локальные библиотеки -->
+  <script src="./js/libs/three.min.js"></script>
+  <script src="./js/libs/ar.js"></script>
+</head>
+<body>
+<div id="status">init…</div>
+<script>
+  const statusEl = document.getElementById('status');
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setPixelRatio(devicePixelRatio);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.domElement.style.position = 'absolute';
+  renderer.domElement.style.top = 0;
+  document.body.appendChild(renderer.domElement);
+
+  // Scene & camera
+  const scene = new THREE.Scene();
+  const camera = new THREE.Camera();
+  scene.add(camera);
+
+  // Webcam
+  const src = new THREEx.ArToolkitSource({ sourceType:'webcam' });
+  src.init(onResize);
+  addEventListener('resize', onResize);
+  function onResize(){
+    src.onResize();
+    src.copySizeTo(renderer.domElement);
+    if (ctx.arController) src.copySizeTo(ctx.arController.canvas);
+  }
+
+  // AR context
+  const ctx = new THREEx.ArToolkitContext({
+    cameraParametersUrl: './img_ardata/camera_para.dat',
+    detectionMode: 'mono'
+  });
+  ctx.init(() => {
+    camera.projectionMatrix.copy(ctx.getProjectionMatrix());
+    statusEl.textContent = 'camera ready, show marker';
+  });
+
+  // Маркер
+  const markerRoot = new THREE.Group(); scene.add(markerRoot);
+  new THREEx.ArMarkerControls(ctx, markerRoot, {
+    type:'pattern',
+    patternUrl:'./img_ardata/room1.patt',
+    size:0.12
+  });
+
+  // Визуальные подсказки
+  const axes = new THREE.AxesHelper(0.06); // RGB оси X,Y,Z
+  markerRoot.add(axes);
+
+  const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06,0.06,0.06),
+    new THREE.MeshNormalMaterial()
+  );
+  cube.position.y = 0.03; // на маркере
+  markerRoot.add(cube);
+
+  let firstSeen = false;
+
+  (function loop(){
+    requestAnimationFrame(loop);
+    if (src.ready) ctx.update(src.domElement);
+
+    // статус
+    if (markerRoot.visible){
+      if (!firstSeen){ firstSeen = true; console.log('Marker VISIBLE'); }
+      statusEl.textContent = 'VISIBLE ✓  (markerRoot.visible=true)';
+      // лёгкая анимация, чтобы видеть, что сцена живёт
+      cube.rotation.y += 0.02;
+    } else {
+      statusEl.textContent = '…looking for marker';
+    }
+
+    renderer.render(scene, camera);
+  })();
+</script>
+</body>
+</html>
