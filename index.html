@@ -1,86 +1,26 @@
 <!doctype html>
 <html lang="ru">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + Three.js (CDN)</title>
-  <link rel="icon" href="data:,"><!-- чтоб не было 404 на favicon -->
-  <style>
-    html,body,canvas{margin:0;height:100%;overflow:hidden;background:transparent}
-    #status{position:fixed;left:8px;top:8px;z-index:10;background:#0009;color:#fff;
-            padding:6px 8px;border-radius:6px;font:12px/1.3 system-ui,Segoe UI,Roboto,Arial}
-  </style>
-
-  <!-- three UMD r118 — ПЕРВЫМ -->
-  <script src="https://unpkg.com/three@0.118.3/build/three.min.js"></script>
-
-  <!-- AR.js (three-ветка) с неймспейсом THREEx -->
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/three.js/build/ar-threex.js"></script>
-
-  <!-- Самотест -->
-  <script>
-    console.log('THREE?', !!window.THREE, 'REV', THREE && THREE.REVISION);
-    console.log('THREEx?', !!window.THREEx);
-  </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AR.js + Three.js (CDN)</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <!-- we import arjs version without NFT but with marker + location based support -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
+
 <body>
-<div id="status">init…</div>
-<script>
-  const statusEl = document.getElementById('status');
-
-  // Renderer
-  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
-  renderer.setPixelRatio(devicePixelRatio);
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.domElement.style.position = 'absolute';
-  renderer.domElement.style.top = 0;
-  document.body.appendChild(renderer.domElement);
-
-  // Scene & camera
-  const scene = new THREE.Scene();
-  const camera = new THREE.Camera();
-  scene.add(camera);
-
-  // Webcam (новые методы без warning'ов)
-  const src = new THREEx.ArToolkitSource({ sourceType:'webcam' });
-  src.init(onResize);
-  addEventListener('resize', onResize);
-  function onResize(){
-    src.onResizeElement();
-    src.copyElementSizeTo(renderer.domElement);
-    if (ctx.arController) src.copyElementSizeTo(ctx.arController.canvas);
-  }
-
-  // AR context (оставим camera_para.dat по сети; можно заменить на локальный при наличии)
-  const ctx = new THREEx.ArToolkitContext({
-    cameraParametersUrl: 'https://jeromeetienne.github.io/AR.js/data/data/camera_para.dat',
-    detectionMode: 'mono'
-  });
-  ctx.init(() => {
-    camera.projectionMatrix.copy(ctx.getProjectionMatrix());
-    statusEl.textContent = 'camera ready, show marker';
-  });
-
-  // Маркер — ЛОКАЛЬНЫЙ .patt
-  const markerRoot = new THREE.Group(); scene.add(markerRoot);
-  new THREEx.ArMarkerControls(ctx, markerRoot, {
-    type: 'pattern',
-    patternUrl: './img/ardata/room1.patt',
-    size: 0.165 // подставь реальную сторону маркера в метрах (напр., 0.12 = 12 см)
-  });
-
-  // Подсказки
-  const axes = new THREE.AxesHelper(0.06); markerRoot.add(axes);
-  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.06), new THREE.MeshNormalMaterial());
-  cube.position.y = 0.03; markerRoot.add(cube);
-
-  (function loop(){
-    requestAnimationFrame(loop);
-    if (src.ready) ctx.update(src.domElement);
-    statusEl.textContent = markerRoot.visible ? 'VISIBLE ✓' : '…looking for marker';
-    if (markerRoot.visible) cube.rotation.y += 0.02;
-    renderer.render(scene, camera);
-  })();
-</script>
+    <a-scene embedded arjs>
+      <a-marker preset="hiro">
+        <a-entity
+          position="0 0 0"
+          scale="0.05 0.05 0.05"
+          gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/scene.gltf"
+        ></a-entity>
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
 </body>
+
 </html>
